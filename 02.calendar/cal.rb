@@ -7,18 +7,21 @@ require "date"
 opt = OptionParser.new
 today = Date.today
 
-year = 0
-month = 0
+# year = 0
+# month = 0
 
-opt.on('-y month') {|v| year = v.to_i  }
+year = today.year
+month = today.month
+
+opt.on('-y year') {|v| year = v.to_i  }
 opt.on('-m month') {|v| month = v.to_i }
 
 opt.parse(ARGV)
 
 
 # 年、月、日、月初日、月末日、月初曜日を用意
-year = today.year if year == 0
-month = today.mon if month == 0
+# year = today.year if year == 0
+# month = today.mon if month == 0
 firstday = 1
 lastday = Date.new(year,month, -1).day
 date = Date.parse("#{year}/#{month}/#{firstday}")
@@ -30,9 +33,10 @@ puts "#{month}月 #{year}".center(20)
 
 ## 曜日一覧を表示
 doys = ["日 ", "月 ", "火 ", "水 ", "木 ","金 " ,"土\n"]
-doys.each do |d|
-  print d
-end
+# doys.each do |d|
+#   print d
+# end
+print doys.join
 
 ## カレンダーの初日から最終日までの配列を作成
 cal = (firstday..lastday).to_a
@@ -48,7 +52,7 @@ cal = (firstday..lastday).to_a
 
 ## 月初の曜日に合わせて空白を追加
 while (doy + cal[6]) % 7 != 0
-  cal.insert(0," ")
+  cal.unshift(" ")
 end
 
 ## 繰り返し回数を取得するための変数n
