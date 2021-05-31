@@ -17,75 +17,64 @@ PERMISSIONS = {
 }.freeze
 
 def main
-  read_options
-
+  options = {}
+  read_options(options)
   files = []
 
-  sorted_files = sort_file
+  lined_up_files = line_up_files(options)
 
-  sorted_files.each do |file|
-    f = File.stat(file)
-    file_data = []
-    file_data << f.ftype
-    file_data << f.mode.to_s(8)
-    file_data << f.nlink
-    file_data << Etc.getpwuid(f.uid).name
-    file_data << Etc.getgrgid(f.gid).name
-    file_data << f.size
-    file_data << f.mtime.strftime('%_m %e %R')
-    file_data << file
-    new_file = LS::File.new(file_data)
+  lined_up_files.each do |file|
+    file_data = File.stat(file)
+    new_file = LS::File.new(file, file_data)
     files << new_file.dup
   end
 
-  files.reverse! if @o[:r]
-
-  DISP.display(files, @o)
+  LS.display(files, options)
 end
 
-def read_options
+def read_options(options)
   opt = OptionParser.new
 
-  @o = {}
-  opt.on('-a') { @o[:a] = true } # aオプションを使うと、ファイル名の先頭にピリオドがあるファイルも表示する。
-  opt.on('-l') { @o[:l] = true } # 「l」はlongなフォーマットを意味する。longというだけあって詳細を表示して、横長になる。
-  opt.on('-r') { @o[:r] = true } # 逆順で表示する。
+  opt.on('-a') { options[:a] = true } # aオプションを使うと、ファイル名の先頭にピリオドがあるファイルも表示する。
+  opt.on('-l') { options[:l] = true } # 「l」はlongなフォーマットを意味する。longというだけあって詳細を表示して、横長になる。
+  opt.on('-r') { options[:r] = true } # 逆順で表示する。
 
   opt.parse!(ARGV)
 end
 
-def sort_file
-  if @o[:a]
-    Dir.glob('*', File::FNM_DOTMATCH).sort
-  else
-    Dir.glob('*').sort
-  end
+def line_up_files(options)
+  files = if options[:a]
+            Dir.glob('*', File::FNM_DOTMATCH).sort
+          else
+            Dir.glob('*').sort
+          end
+  options[:r] ? files.reverse! : files
 end
 
 module LS
   # 表示するためのファイル情報を保持するクラス
   class File
-    attr_accessor :mode, :link, :owner, :group, :size, :time, :name
+    attr_reader :mode, :link, :owner, :group, :size, :time, :name
 
-    def initialize(file_data)
+    def initialize(file, file_data)
       # lオプションでで必要な情報
-      @mode = trans_mode(file_data[0], file_data[1]) # 権限など
-      @link = file_data[2] # ハードリンクの数
-      @owner = file_data[3] # オーナー名
-      @group = file_data[4] # グループ名
-      @size = file_data[5] # バイトサイズ
-      @time = file_data[6] # タイムスタンプ
-      @name = file_data[7] # ファイル名
+      @mode = trans_mode(file_data.ftype, file_data.mode.to_s(8)) # 権限など
+      @link = file_data.nlink # ハードリンクの数
+      @owner = Etc.getpwuid(file_data.uid).name # オーナー名
+      @group = Etc.getgrgid(file_data.gid).name # グループ名
+      @size = file_data.size # バイトサイズ
+      @time = file_data.mtime.strftime('%_m %e %R') # タイムスタンプ
+      @name = file # ファイル名
     end
 
     def trans_mode(type, mode)
-      get_type(type) + get_per(mode)
+      convert_file_type(type) + specify_permission(mode)
     end
 
-    #-------ファイル情報取得処理-------
+    # -------ファイル情報取得処理-------
 
     # ファイルタイプ取得
-    def get_type(type)
+    def convert_file_type(type)
       case type
       when 'fifo'
         'p'
@@ -107,56 +96,56 @@ module LS
     end
 
     # パーミッション取得
-    def get_per(mode)
+    def specify_permission(mode)
       # modeの後ろ4桁の数字から特殊権限と通常の権限を取得
-      ex_per = mode.to_s[-4]
-      abs_per = mode.to_s[-3..]
+      ex_permission = mode.to_s[-4]
+      absolute_permission = mode.to_s[-3..]
 
-      sym_per = ''
-      abs_per.each_char do |p|
-        +sym_per += per_calc(p)
+      symbolic_permission = ''
+      absolute_permission.each_char do |per|
+        +symbolic_permission += calculate_permission(per)
       end
 
-      ex_per_calc(ex_per, sym_per)
+      calculate_ex_permission(ex_permission, symbolic_permission)
     end
 
     # 各パーミッション変換
-    def per_calc(per)
-      PERMISSIONS[per]
+    def calculate_permission(permission)
+      PERMISSIONS[permission]
     end
 
-    def ex_per_calc(special, per)
+    def calculate_ex_permission(special, permission)
       case special
       when '1' # stickyのみ
-        per[8] = sticky_calc(per)
+        permission[8] = calculate_sticky(permission)
       when '2' # sgidのみ
-        per[5] = sgid_calc(per)
+        permission[5] = calculate_sgid(permission)
       when '3' # stickyとsgid
-        per[8] = sticky_calc(per)
-        per[5] = sgid_calc(per)
+        permission[8] = calculate_sticky(permission)
+        permission[5] = calculate_sgid(permission)
       when '4' # suidのみ
-        per[2] = suid_calc(per)
+        permission[2] = calculate_suid(permission)
       when '5' # stickyとsuid
-        per[8] = sticky_calc(per)
-        per[2] = suid_calc(per)
+        permission[8] = calculate_sticky(permission)
+        permission[2] = calculate_suid(permission)
       when '6' # suidとsgid
-        per[5] = sgid_calc(per)
-        per[2] = suid_calc(per)
+        permission[5] = calculate_sgid(permission)
+        permission[2] = calculate_suid(permission)
       when '7' # 全部
-        all_ex_per(per)
+        calculate_all_ex_permission(permission)
       end
-      per
+      permission
     end
 
-    def all_ex_per(per)
-      per[8] = sticky_calc(per)
-      per[5] = sgid_calc(per)
-      per[2] = suid_calc(per)
+    def calculate_all_ex_permission(permission)
+      per[8] = calculate_sticky(permission)
+      per[5] = calculate_sgid(permission)
+      per[2] = calculate_suid(permission)
     end
 
     # スティッキービット変換
-    def sticky_calc(per)
-      if per[8] == 'x'
+    def calculate_sticky(permission)
+      if permission[8] == 'x'
         't'
       else
         'T'
@@ -164,8 +153,8 @@ module LS
     end
 
     # suid変換
-    def suid_calc(per)
-      if per[2] == 'x'
+    def calculate_suid(permission)
+      if permission[2] == 'x'
         's'
       else
         'S'
@@ -173,31 +162,29 @@ module LS
     end
 
     # sgid変換
-    def sgid_calc(per)
-      if per[5] == 'x'
+    def calculate_sgid(permission)
+      if permission[5] == 'x'
         's'
       else
         'S'
       end
     end
   end
-end
 
-#--------表示処理---------
+  # --------表示処理---------
 
-module DISP
   def self.display(files, options)
     if options[:l]
-      DISP.display_l(files)
+      LS.display_l(files)
     else
-      DISP.display_normal(files)
+      LS.display_normal(files)
     end
   end
 
   # オプションごとの表示方法
   def self.display_l(files)
     files.each do |file|
-      puts "#{file.mode} #{file.link} #{file.owner} #{file.group} #{file.size} #{file.time} #{file.name}"
+      display_file_data(file)
     end
   end
 
@@ -216,7 +203,12 @@ module DISP
       print("\n")
     end
   end
+
+  # ファイル情報を表示
+  def self.display_file_data(file)
+    puts "#{file.mode} #{file.link} #{file.owner} #{file.group} #{file.size} #{file.time} #{file.name}"
+  end
 end
 
-#--実行--
+# --実行--
 main
