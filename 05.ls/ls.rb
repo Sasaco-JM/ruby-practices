@@ -26,7 +26,7 @@ def main
   lined_up_files.each do |file|
     file_data = File.stat(file)
     new_file = LS::File.new(file, file_data)
-    files << new_file.dup
+    files << new_file
   end
 
   LS.display(files, options)
@@ -54,7 +54,7 @@ end
 module LS
   # 表示するためのファイル情報を保持するクラス
   class File
-    attr_reader :mode, :link, :owner, :group, :size, :time, :name
+    attr_reader :name
 
     def initialize(file, file_data)
       # lオプションでで必要な情報
@@ -65,6 +65,11 @@ module LS
       @size = file_data.size # バイトサイズ
       @time = file_data.mtime.strftime('%_m %e %R') # タイムスタンプ
       @name = file # ファイル名
+    end
+
+    # ファイル情報を表示
+    def display_file_data
+      puts "#{@mode} #{@link} #{@owner} #{@group} #{@size} #{@time} #{@name}"
     end
 
     def trans_mode(type, mode)
@@ -183,9 +188,7 @@ module LS
 
   # オプションごとの表示方法
   def self.display_l(files)
-    files.each do |file|
-      display_file_data(file)
-    end
+    files.each(&:display_file_data)
   end
 
   def self.display_normal(files)
@@ -202,11 +205,6 @@ module LS
       end
       print("\n")
     end
-  end
-
-  # ファイル情報を表示
-  def self.display_file_data(file)
-    puts "#{file.mode} #{file.link} #{file.owner} #{file.group} #{file.size} #{file.time} #{file.name}"
   end
 end
 
