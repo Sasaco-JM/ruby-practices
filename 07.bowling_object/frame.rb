@@ -11,7 +11,7 @@ class Frame
 
   def score
     score = @first_shot.score + @second_shot.score
-    score += third_shot.score unless @third_shot.nil?
+    score += third_shot.score if @third_shot
     score
   end
 end

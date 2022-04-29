@@ -24,7 +24,7 @@ class Game
   def create_frames(marks)
     marks.each_with_index do |mark, i|
       if @frames.size < 9 # 最終フレーム以外
-        create_frame_exept_last_frame(mark)
+        create_frame_except_last_frame(mark)
       elsif @frames.size == 9 # 最終フレーム
         @one_frame << mark
       end
@@ -33,7 +33,7 @@ class Game
     end
   end
 
-  def create_frame_exept_last_frame(mark)
+  def create_frame_except_last_frame(mark)
     if mark == 'X' && @throw_count.zero? # 一投目がストライクの場合
       @one_frame.push(mark, 0)
       @throw_count = 1
