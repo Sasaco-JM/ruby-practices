@@ -18,10 +18,8 @@ class Parse
   end
 
   def activate_option(opt)
-    p opt
     case opt
     when 'a'
-      p "debug:opt = #{opt}"
       @activated_options[:a] = true # aオプションを使うと、ファイル名の先頭にピリオドがあるファイルも表示する。
     when 'l'
       @activated_options[:l] = true  # 「l」はlongなフォーマットを意味する。longというだけあって詳細を表示して、横長になる。
