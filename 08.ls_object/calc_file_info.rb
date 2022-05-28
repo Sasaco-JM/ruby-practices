@@ -91,28 +91,16 @@ module CalcFileInfo
 
   # スティッキービット変換
   def calculate_sticky(permission)
-    if permission[8] == 'x'
-      't'
-    else
-      'T'
-    end
+    permission[8] == 'x' ? 't' : 'T'
   end
 
   # suid変換
   def calculate_suid(permission)
-    if permission[2] == 'x'
-      's'
-    else
-      'S'
-    end
+    permission[2] == 'x' ? 's' : 'S'
   end
 
   # sgid変換
   def calculate_sgid(permission)
-    if permission[5] == 'x'
-      's'
-    else
-      'S'
-    end
+    permission[5] == 'x' ? 's' : 'S'
   end
 end
