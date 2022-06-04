@@ -1,19 +1,24 @@
 # frozen_string_literal: true
 
+require './option'
+require './format'
+
 class Ls
   # 表示するためのファイル情報を保持するクラス
-  def initialize(*options)
-    parse = Option.new(*options)
-    @activated_options = parse.activated_options
+  def initialize(options)
+    @activated_options = options
     @format = Format.new(@activated_options)
   end
 
-  # --------表示処理---------
   def display
-    if @activated_options[:l]
-      @format.display_l
-    else
-      @format.display_normal
-    end
+    @format.display
   end
 end
+
+def main
+  parse = Option.new
+  ls = Ls.new(parse.activated_options)
+  ls.display
+end
+# --実行--
+main

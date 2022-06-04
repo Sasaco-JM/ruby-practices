@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'etc'
+require './calc_file_info'
 
 class FileInfo
   include CalcFileInfo
